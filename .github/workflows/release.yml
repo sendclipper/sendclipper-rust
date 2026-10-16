@@ -1,0 +1,41 @@
+name: Release to crates.io
+
+# Runs when a version tag (v0.2.0, ...) reaches this repository. The monorepo
+# pushes it with `scripts/split-to-github.sh v<version>`.
+#
+# Trusted publishing: crates.io trusts THIS workflow file in THIS repository
+# (crates.io > sendclipper > Settings > Trusted Publishing), so no token is
+# stored. crates.io cannot trust a workflow for a crate that does not exist
+# yet, so the FIRST release uses a CRATES_IO_TOKEN repository secret instead;
+# delete that secret (and revoke the token) once trusted publishing is set.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      HAS_TOKEN: ${{ secrets.CRATES_IO_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Tag matches Cargo.toml
+        run: |
+          version="v$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "tag $GITHUB_REF_NAME does not match Cargo.toml $version" >&2
+            exit 1
+          fi
+      - run: cargo test
+      - uses: rust-lang/crates-io-auth-action@v1.0.5
+        if: env.HAS_TOKEN != 'true'
+        id: auth
+      - run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN || steps.auth.outputs.token }}
