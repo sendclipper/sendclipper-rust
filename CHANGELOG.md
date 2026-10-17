@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 — 2026-10-17
+
+- README: how to install in a workspace of several crates (`cargo add --package`). No code change.
+
 ## 0.1.0 — 2026-10-16
 
 First release.

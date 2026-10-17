@@ -7,6 +7,8 @@ cargo add sendclipper
 cargo add tokio --features macros,rt-multi-thread
 ```
 
+In a workspace with several crates, `cargo add` at the root cannot pick one: add `--package <crate>` (the crate that sends mail) to both commands.
+
 Async, on tokio and reqwest. TLS through rustls by default (`default-features = false, features = ["native-tls"]` for the platform's own). Rust 1.85 or newer. API reference on [docs.rs](https://docs.rs/sendclipper).
 
 ## Setup
