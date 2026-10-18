@@ -48,6 +48,33 @@ async fn main() -> Result<(), sendclipper::Error> {
 
 `from` must be a bare address on a domain you verified in SendClipper. Each message has one recipient in `to`; for several, use `batch().send()`.
 
+## Reply-To and attachments
+
+```rust
+use sendclipper::{Attachment, Client, SendEmailParams};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Client::from_env();
+    let pdf = std::fs::read("booking-42.pdf")?;
+    client
+        .emails()
+        .send(&SendEmailParams {
+            from: "bookings@acme.io".into(),
+            to: "ada@lumen.io".into(),
+            subject: Some("Your booking".into()),
+            html: Some("<p>Your confirmation is attached.</p>".into()),
+            reply_to: Some(vec!["support@acme.io".into()]),
+            attachments: Some(vec![Attachment::new("booking-42.pdf", pdf)]),
+            ..Default::default()
+        })
+        .await?;
+    Ok(())
+}
+```
+
+`reply_to` is a list of 1 to 10 bare addresses. `Attachment::new` takes the file's bytes (any `Into<Vec<u8>>`) and the SDK sends them as base64; add `.content_type("application/pdf")` to set the type, otherwise it is guessed from the filename. Limits: 10 MiB per file, 25 MiB of files per message, and your sending provider's own. Attachments are not accepted on a batch item; send those emails on their own.
+
 ## Send with a template
 
 Design and publish a template in the dashboard, then send it by id or by its send name:

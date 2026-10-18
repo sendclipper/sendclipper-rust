@@ -62,6 +62,69 @@ pub struct SendEmailParams {
     /// `Some(false)` leaves links unwrapped. Default on.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub track_clicks: Option<bool>,
+    /// Where replies go, sent as `Reply-To`: 1 to 10 bare addresses. Left out, replies go to `from`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reply_to: Option<Vec<String>>,
+    /// Files sent with the message: at most 20, 10 MiB each and 25 MiB together,
+    /// plus the sending provider's own limits. Not accepted on a batch item: the
+    /// server fails that item with `attachments_not_batchable`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attachments: Option<Vec<Attachment>>,
+}
+
+/// One file on `emails().send()` / `sandboxes().send()`.
+///
+/// ```no_run
+/// # fn run() -> std::io::Result<()> {
+/// let invoice = sendclipper::Attachment::new("invoice-42.pdf", std::fs::read("invoice-42.pdf")?).content_type("application/pdf");
+/// # let _ = invoice;
+/// # Ok(())
+/// # }
+/// ```
+#[derive(Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Attachment {
+    /// The name the recipient sees, e.g. `invoice-42.pdf`.
+    pub filename: String,
+    /// The file's bytes. Sent as standard base64.
+    #[serde(serialize_with = "serialize_base64")]
+    pub content: Vec<u8>,
+    /// e.g. `application/pdf`. Left out, the server guesses it from the filename.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_type: Option<String>,
+}
+
+impl Attachment {
+    /// A file with its name and bytes, e.g. `Attachment::new("a.pdf", std::fs::read("a.pdf")?)`.
+    pub fn new(filename: impl Into<String>, content: impl Into<Vec<u8>>) -> Attachment {
+        Attachment {
+            filename: filename.into(),
+            content: content.into(),
+            content_type: None,
+        }
+    }
+
+    /// Set the MIME type instead of letting the server guess it from the filename.
+    pub fn content_type(mut self, content_type: impl Into<String>) -> Attachment {
+        self.content_type = Some(content_type.into());
+        self
+    }
+}
+
+/// Prints the size, not the bytes: a file can be megabytes long.
+impl std::fmt::Debug for Attachment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Attachment")
+            .field("filename", &self.filename)
+            .field("content", &format_args!("<{} bytes>", self.content.len()))
+            .field("content_type", &self.content_type)
+            .finish()
+    }
+}
+
+fn serialize_base64<S: serde::Serializer>(bytes: &[u8], s: S) -> Result<S::Ok, S::Error> {
+    use base64::Engine as _;
+    s.serialize_str(&base64::engine::general_purpose::STANDARD.encode(bytes))
 }
 
 /// What `emails().send()` answers: the message was accepted (`queued`).

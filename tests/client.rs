@@ -449,6 +449,53 @@ async fn sandboxes_send_uses_the_sandbox_token_instead_of_the_api_key() {
 }
 
 #[tokio::test]
+async fn reply_to_and_attachments_travel_with_base64_content() {
+    let (server, client) = setup().await;
+    replies(
+        &server,
+        vec![
+            ResponseTemplate::new(201).set_body_json(sent()),
+            ResponseTemplate::new(201).set_body_json(json!({"id": "sbx-msg"})),
+        ],
+    )
+    .await;
+    let params = SendEmailParams {
+        reply_to: Some(vec!["support@acme.io".into(), "ops@acme.io".into()]),
+        attachments: Some(vec![
+            Attachment::new("hello.txt", b"Hello, world!".to_vec()).content_type("text/plain"),
+            Attachment::new("raw.bin", vec![0xfb, 0xff, 0x00]),
+        ]),
+        ..msg()
+    };
+    client.emails().send(&params).await.unwrap();
+    client.sandboxes().send("sc_sbx_abc", &params).await.unwrap();
+    let all = calls(&server).await;
+    assert_eq!(all[0].url.path(), "/v1/emails");
+    assert_eq!(all[1].url.path(), "/v1/sandbox/emails");
+    assert_eq!(header(&all[1], "authorization"), Some("Bearer sc_sbx_abc"));
+    for c in &all {
+        assert_eq!(
+            std::str::from_utf8(&c.body).unwrap(),
+            concat!(
+                r#"{"from":"a@acme.io","to":"b@lumen.io","subject":"s","html":"h","#,
+                r#""replyTo":["support@acme.io","ops@acme.io"],"#,
+                r#""attachments":[{"filename":"hello.txt","content":"SGVsbG8sIHdvcmxkIQ==","contentType":"text/plain"},"#,
+                r#"{"filename":"raw.bin","content":"+/8A"}]}"#
+            )
+        );
+    }
+}
+
+#[test]
+fn an_attachment_debug_prints_its_size_not_its_bytes() {
+    let a = Attachment::new("a.pdf", vec![1u8; 2048]);
+    assert_eq!(
+        format!("{a:?}"),
+        r#"Attachment { filename: "a.pdf", content: <2048 bytes>, content_type: None }"#
+    );
+}
+
+#[tokio::test]
 async fn contacts_import_is_multipart_with_no_idempotency_key_and_never_retried() {
     let (server, client) = setup().await;
     replies(&server, vec![api_err(503, "unavailable", "down")]).await;
@@ -590,6 +637,7 @@ async fn batch_send_posts_emails_and_returns_per_item_results() {
             from: "a@acme.io".into(),
             to: "y@lumen.io".into(),
             template_id: Some("tpl_draft".into()),
+            reply_to: Some(vec!["support@acme.io".into()]),
             ..Default::default()
         },
     ];
@@ -601,7 +649,7 @@ async fn batch_send_posts_emails_and_returns_per_item_results() {
         assert_eq!(c.url.path(), "/v1/emails/batch");
         assert_eq!(
             body(&c),
-            json!({"emails": [{"from": "a@acme.io", "to": "b@lumen.io", "subject": "s", "html": "h"}, {"from": "a@acme.io", "to": "y@lumen.io", "templateId": "tpl_draft"}]})
+            json!({"emails": [{"from": "a@acme.io", "to": "b@lumen.io", "subject": "s", "html": "h"}, {"from": "a@acme.io", "to": "y@lumen.io", "templateId": "tpl_draft", "replyTo": ["support@acme.io"]}]})
         );
         assert!(header(&c, "idempotency-key").is_some());
     }
