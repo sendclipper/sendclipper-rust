@@ -245,6 +245,22 @@ Management routes need a key with **Full access**. A sending-only key can call `
 
 Full API reference: <https://sendclipper.com/docs>.
 
+## Other languages
+
+SendClipper has an official SDK for each of these languages, all calling the same API with the same conventions.
+
+| Language | Package | Registry | Repository |
+|---|---|---|---|
+| Node.js | `@sendclipper/node` | [npm](https://www.npmjs.com/package/@sendclipper/node) | [sendclipper/sendclipper-node](https://github.com/sendclipper/sendclipper-node) |
+| Python | `sendclipper` | [PyPI](https://pypi.org/project/sendclipper/) | [sendclipper/sendclipper-python](https://github.com/sendclipper/sendclipper-python) |
+| PHP | `sendclipper/sendclipper-php` | [Packagist](https://packagist.org/packages/sendclipper/sendclipper-php) | [sendclipper/sendclipper-php](https://github.com/sendclipper/sendclipper-php) |
+| Go | `github.com/sendclipper/sendclipper-go` | [pkg.go.dev](https://pkg.go.dev/github.com/sendclipper/sendclipper-go) | [sendclipper/sendclipper-go](https://github.com/sendclipper/sendclipper-go) |
+| Ruby | `sendclipper` | [RubyGems](https://rubygems.org/gems/sendclipper) | [sendclipper/sendclipper-ruby](https://github.com/sendclipper/sendclipper-ruby) |
+| Rust | `sendclipper` | [crates.io](https://crates.io/crates/sendclipper) | this library |
+| Java | `com.sendclipper:sendclipper-java` | [Maven Central](https://central.sonatype.com/artifact/com.sendclipper/sendclipper-java) | [sendclipper/sendclipper-java](https://github.com/sendclipper/sendclipper-java) |
+
+Documentation for all of them: <https://sendclipper.com/docs>.
+
 ## License
 
 MIT
